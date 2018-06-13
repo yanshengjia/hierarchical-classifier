@@ -37,7 +37,7 @@ The idea of hierarchical classification is similar with Blending / Stacking in E
 
 ## Data
 
-我们使用 17Tech OCR 图片标注的作文特征数据集来训练和评估层次分类器。
+我们使用作文特征数据集来训练和评估层次分类器。
 
 这个数据集可以在这找到：`hierarchical-classifier/data/essay_features.csv`
 
