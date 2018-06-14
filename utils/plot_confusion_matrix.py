@@ -22,9 +22,6 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
 
         # get the precision (fraction of class-k predictions that have ground truth label k)
         # cm = cm.astype('float') / cm.sum(axis=0)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Non-normalized confusion matrix')
 
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
@@ -47,7 +44,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
 def build_confusion_matrix(true_labels, pred_labels, fig_path):
     cm = confusion_matrix(true_labels, pred_labels)
     np.set_printoptions(precision=3)
-    class_names = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15']
+    class_names = ['1', '2', '3', '4', '5']
 
     # plot non-normalized confusion matrix
     plt.figure()

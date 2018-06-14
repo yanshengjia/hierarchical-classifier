@@ -150,18 +150,22 @@ class HCDataset(object):
 
     def bucketize(self, labels):
         """
-        Move labels into 3 buckets.
+        Move labels into 5 buckets.
         Args:
             labels: array-like, shape (n_samples,)
         """
         new_labels = []
         for label in labels:
-            if label <= 5:
-                new_label = 0
-            elif 6 <= label <= 10:
+            if label <= 3:
                 new_label = 1
-            else:
+            elif 4 <= label <= 6:
                 new_label = 2
+            elif 7 <= label <= 10:
+                new_label = 3
+            elif 11 <= label <= 13:
+                new_label = 4
+            else:
+                new_label = 5
             new_labels.append(new_label)
         new_labels = np.array(new_labels)
         return new_labels

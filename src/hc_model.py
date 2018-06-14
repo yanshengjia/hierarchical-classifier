@@ -9,6 +9,8 @@ This module implements the hierarchical classification models.
 """
 
 import os
+import sys
+sys.path.append('../utils')
 import time
 import json
 import numpy as np
@@ -26,6 +28,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.externals import joblib
 
 from dataset import HCDataset
+from plot_confusion_matrix import *
 
 import logging
 logging.basicConfig(
@@ -69,6 +72,7 @@ class HCModel(object):
         
         # save info
         self.result_path = args.result_dir + 'result.json'
+        self.cm_path = args.result_dir + 'cm.png'
 
     def _crated_model(self, model_type=''):
         '''
@@ -116,7 +120,7 @@ class HCModel(object):
         The fuse layer, including 1 classifier
         '''
         self.fuse_layer = self._crated_model(self.algo2)
-        self.fuse_layer.fit(features, self.labels)
+        self.fuse_layer.fit(features, self.base_labels)
 
     def _concat_features(self, feature_list):
         '''
@@ -133,7 +137,7 @@ class HCModel(object):
                 first_flag = False
             else:
                 features = np.concatenate((features, feature), axis=1)
-        assert features[0].size == 3 * self.n_classifiers, 'The dim of base features is incorrect!'
+        assert features[0].size == 5 * self.n_classifiers, 'The dim of base features is incorrect!'
         return features
 
     def _build_model(self, data):
@@ -174,17 +178,19 @@ class HCModel(object):
         if evaluate:
             self.evaluate(data)
 
-    def evaluate(self, data, save=True):
+    def evaluate(self, data, save=True, draw=True):
         """
         Evaluate the model
         Args:
             data: the HCDataset class implemented in dataset.py
             save: whether to save the evaluation results
+            draw: whether to draw the confusion matrix
         """
         logger.info('Evaluating the model on dev set:')
         base_output_list = []
         for feature_type in data.feature_types:
             features, y_true = data._gen_input(data.dev_set, feature_type=feature_type)
+            y_true = data.bucketize(y_true)
             base_output = self.base_layer[feature_type].predict_proba(features)
             base_output_list.append(base_output)
         base_output_features = self._concat_features(base_output_list)
@@ -200,6 +206,7 @@ class HCModel(object):
         base_output_list = []
         for feature_type in data.feature_types:
             features, y_true = data._gen_input(data.test_set, feature_type=feature_type)
+            y_true = data.bucketize(y_true)
             base_output = self.base_layer[feature_type].predict_proba(features)
             base_output_list.append(base_output)
         base_output_features = self._concat_features(base_output_list)
@@ -211,6 +218,9 @@ class HCModel(object):
         self.test_acc = accuracy_score(y_true, y_pred)
         logger.info('  [TEST] QWK: %.3f, LWK: %.3f, PRS: %.3f, ACC: %.3f' % (self.test_qwk, self.test_lwk, self.test_prs, self.test_acc))
         logger.info('Done with model evaluation!')
+
+        if draw:
+            self.draw_confusion_matrix(y_true, y_pred)
 
         if save:
             self.save_results()
@@ -232,13 +242,17 @@ class HCModel(object):
         result['test_acc'] = self.test_acc
         return result
 
+    def draw_confusion_matrix(self, y_true, y_pred):
+        build_confusion_matrix(y_true, y_pred, self.cm_path)
+        logger.info('Confusion matrix saved in: {}'.format(self.cm_path))
+
     def save_results(self):
         with open(self.result_path, 'a') as o_file:
             res = self._build_result()
             res_json = json.dumps(res)
             o_file.write(res_json + '\n')
-        logger.info('The evaluation results saved.')
-    
+        logger.info('Evaluation results saved in: {}'.format(self.result_path))
+
     def save_models(self, model_dir, model_predix):
         pass
     
