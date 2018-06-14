@@ -96,16 +96,17 @@ class HCModel(object):
         Args:
             data: the HCDataset class implemented in dataset.py
         '''
-        self.base_layer = {}    # the dict of 5 classifiers
-        self.base_feature = {}  # the dict of input features for 5 classifiers
+        self.base_layer = {}    # the dict of base classifiers
+        self.base_feature = {}  # the dict of input features for base classifiers
+        self.n_classifiers = len(list(data.feature_types))
         for feature_type in data.feature_types:
-            logger.info('Generate {} features and labels from train set.'.format(feature_type))
+            logger.info('  Generate {} features and labels from train set.'.format(feature_type))
             features, self.labels = data._gen_input(data.train_set, feature_type=feature_type)
             self.base_feature[feature_type] = features
             self.base_labels = data.bucketize(self.labels)
             model_type = self.base_models[feature_type]
             assert model_type != '', 'The model type for {} classifier is not specified.'.format(feature_type)
-            logger.info('Train {} model for {} classifier.'.format(model_type, feature_type))
+            logger.info('  Train {} model for {} classifier.'.format(model_type, feature_type))
             base_model = self._crated_model(model_type)
             base_model.fit(features, self.base_labels)
             self.base_layer[feature_type] = base_model
@@ -132,7 +133,7 @@ class HCModel(object):
                 first_flag = False
             else:
                 features = np.concatenate((features, feature), axis=1)
-        assert features[0].size == 15, 'The dim of base features is incorrect!'
+        assert features[0].size == 3 * self.n_classifiers, 'The dim of base features is incorrect!'
         return features
 
     def _build_model(self, data):
@@ -147,11 +148,13 @@ class HCModel(object):
         logger.info('Building fuse layer...')
         self._fuse(base_output_features)
 
+        logger.info('------------------------------')
         logger.info('Model Architecture:')
         logger.info('* Base Layer:')
         for feature_type in data.feature_types:
             logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
         logger.info('* Fuse Layer: {}'.format(self.algo2))
+        logger.info('------------------------------')
 
     def cross_validation(self):
         '''

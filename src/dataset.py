@@ -70,26 +70,23 @@ class HCDataset(object):
             try:
                 feature_config = yaml.load(stream)
                 logger.info('Feature config loaded.')
+                self.full_feature_types = list(feature_config.keys())
                 self.feature_types = list(feature_config.keys())
                 self.feature_types.remove('basic')
                 logger.info('Feature types: ' + str(self.feature_types))
 
-                self.basic_info_dim        = len(feature_config['basic'])
-                self.lexical_feature_dim   = len(feature_config['lexical'])
-                self.grammar_feature_dim   = len(feature_config['grammar'])
-                self.sentence_feature_dim  = len(feature_config['sentence'])
-                self.structure_feature_dim = len(feature_config['structure'])
-                self.content_feature_dim   = len(feature_config['content'])
-                self.feature_dim = self.lexical_feature_dim + self.grammar_feature_dim + self.sentence_feature_dim + self.structure_feature_dim + self.content_feature_dim
+                self.feature_dim = {}
+                for feature_type in self.full_feature_types:
+                    self.feature_dim[feature_type] = len(feature_config[feature_type])
+                
+                self.feature_dim['sum'] = 0
+                for feature_type in self.feature_types:
+                    self.feature_dim['sum'] += self.feature_dim[feature_type]
 
-                logger.info('Basic info dim: {}'.format(self.basic_info_dim))
-                logger.info('Feature dim: {}'.format(self.feature_dim))
-                logger.info('  Lexical feature dim: {}'.format(self.lexical_feature_dim))
-                logger.info('  Grammar feature dim: {}'.format(self.grammar_feature_dim))
-                logger.info('  Sentence feature dim: {}'.format(self.sentence_feature_dim))
-                logger.info('  Structure feature dim: {}'.format(self.structure_feature_dim))
-                logger.info('  Content feature dim: {}'.format(self.content_feature_dim))
-
+                logger.info('Basic info dim: {}'.format(self.feature_dim['basic']))
+                logger.info('Feature dim: {}'.format(self.feature_dim['sum']))
+                for feature_type in self.feature_types:
+                    logger.info('  {} feature dim: {}'.format(feature_type, self.feature_dim[feature_type]))
                 return feature_config
             except yaml.YAMLError as exc:
                 logger.error(exc)
