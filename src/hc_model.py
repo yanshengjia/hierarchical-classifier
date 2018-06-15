@@ -81,7 +81,7 @@ class HCModel(object):
         if model_type == 'gbdt':
             model = GradientBoostingClassifier()
         elif model_type == 'rf':
-            model = RandomForestClassifier()
+            model = RandomForestClassifier(n_estimators=30)
         elif model_type == 'svc':
             model = svm.SVC(kernel='linear', probability=True)
         elif model_type == 'mnb':
@@ -115,12 +115,23 @@ class HCModel(object):
             base_model.fit(features, self.base_labels)
             self.base_layer[feature_type] = base_model
 
+    def _dense(self, data):
+        '''
+        The dense layer, including all combinations of classifiers
+        Args:
+            data: the HCDataset class implemented in dataset.py
+        '''
+        pass
+
+
     def _fuse(self, features):
         '''
         The fuse layer, including 1 classifier
         '''
         self.fuse_layer = self._crated_model(self.algo2)
-        self.fuse_layer.fit(features, self.base_labels)
+        self.fuse_layer.fit(features, self.labels)
+        self.fuse_output_dim = 16
+        logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
 
     def _concat_features(self, feature_list):
         '''
@@ -138,6 +149,8 @@ class HCModel(object):
             else:
                 features = np.concatenate((features, feature), axis=1)
         assert features[0].size == 5 * self.n_classifiers, 'The dim of base features is incorrect!'
+        self.base_output_dim = features[0].size
+        logger.info('Base output dim: {}'.format(self.base_output_dim))
         return features
 
     def _build_model(self, data):
@@ -190,7 +203,6 @@ class HCModel(object):
         base_output_list = []
         for feature_type in data.feature_types:
             features, y_true = data._gen_input(data.dev_set, feature_type=feature_type)
-            y_true = data.bucketize(y_true)
             base_output = self.base_layer[feature_type].predict_proba(features)
             base_output_list.append(base_output)
         base_output_features = self._concat_features(base_output_list)
@@ -206,7 +218,6 @@ class HCModel(object):
         base_output_list = []
         for feature_type in data.feature_types:
             features, y_true = data._gen_input(data.test_set, feature_type=feature_type)
-            y_true = data.bucketize(y_true)
             base_output = self.base_layer[feature_type].predict_proba(features)
             base_output_list.append(base_output)
         base_output_features = self._concat_features(base_output_list)
@@ -220,13 +231,12 @@ class HCModel(object):
         logger.info('Done with model evaluation!')
 
         if draw:
-            self.draw_confusion_matrix(y_true, y_pred)
+            self.test_cm = self.draw_confusion_matrix(y_true, y_pred)
+            logger.info('Confusion matrix on test set:\n{}'.format(self.test_cm))
+            logger.info('Confusion matrix saved in: {}'.format(self.cm_path))
 
         if save:
             self.save_results()
-    
-    def predict(self):
-        pass
     
     def _build_result(self):
         result = {}
@@ -243,8 +253,8 @@ class HCModel(object):
         return result
 
     def draw_confusion_matrix(self, y_true, y_pred):
-        build_confusion_matrix(y_true, y_pred, self.cm_path)
-        logger.info('Confusion matrix saved in: {}'.format(self.cm_path))
+        cm = build_confusion_matrix(y_true, y_pred, self.fuse_output_dim, self.cm_path)
+        return cm
 
     def save_results(self):
         with open(self.result_path, 'a') as o_file:
@@ -258,6 +268,10 @@ class HCModel(object):
     
     def restore(self, model_dir, model_predix):
         pass
+    
+    def predict(self):
+        pass
+    
 
 
 

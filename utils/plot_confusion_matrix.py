@@ -41,10 +41,10 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
 
-def build_confusion_matrix(true_labels, pred_labels, fig_path):
+def build_confusion_matrix(true_labels, pred_labels, n_classes, fig_path):
     cm = confusion_matrix(true_labels, pred_labels)
     np.set_printoptions(precision=3)
-    class_names = ['1', '2', '3', '4', '5']
+    class_names = list(range(0, n_classes))
 
     # plot non-normalized confusion matrix
     plt.figure()
@@ -54,7 +54,7 @@ def build_confusion_matrix(true_labels, pred_labels, fig_path):
     # plot normalized confusion matrix
     # plt.figure()
     # plot_confusion_matrix(cm, classes=class_names, normalize=True, title='Normalized confusion matrix')
-    # plt.savefig('./normalized_cm.png')
+    # plt.savefig(fig_path)
     return cm
 
 

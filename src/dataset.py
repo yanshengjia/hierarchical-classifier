@@ -156,13 +156,13 @@ class HCDataset(object):
         """
         new_labels = []
         for label in labels:
-            if label <= 3:
+            if label <= 4:
                 new_label = 1
-            elif 4 <= label <= 6:
+            elif 5 <= label <= 8:
                 new_label = 2
-            elif 7 <= label <= 10:
+            elif 9 <= label <= 10:
                 new_label = 3
-            elif 11 <= label <= 13:
+            elif 11 <= label <= 12:
                 new_label = 4
             else:
                 new_label = 5
