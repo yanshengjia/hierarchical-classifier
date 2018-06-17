@@ -47,27 +47,27 @@ class HCModel(object):
 	"""
     def __init__(self, args):
         # basic config
-        self.algo1   = args.algo1
-        self.algo2   = args.algo2
+        self.base   = args.base
+        self.fuse   = args.fuse
         
-        if self.algo1:
-            self.algo1_1 = self.algo1
-            self.algo1_2 = self.algo1
-            self.algo1_3 = self.algo1
-            self.algo1_4 = self.algo1
-            self.algo1_5 = self.algo1
+        if self.base:
+            self.c1 = self.base
+            self.c2 = self.base
+            self.c3 = self.base
+            self.c4 = self.base
+            self.c5 = self.base
         else:
-            self.algo1_1 = args.algo1_1
-            self.algo1_2 = args.algo1_2
-            self.algo1_3 = args.algo1_3
-            self.algo1_4 = args.algo1_4
-            self.algo1_5 = args.algo1_5
+            self.c1 = args.c1
+            self.c2 = args.c2
+            self.c3 = args.c3
+            self.c4 = args.c4
+            self.c5 = args.c5
         self.base_models = {
-                            'lexical': self.algo1_1, 
-                            'grammar': self.algo1_2, 
-                            'sentence': self.algo1_3, 
-                            'structure': self.algo1_4, 
-                            'content': self.algo1_5
+                            'lexical': self.c1, 
+                            'grammar': self.c2, 
+                            'sentence': self.c3, 
+                            'structure': self.c4, 
+                            'content': self.c5
                         }
         
         # save info
@@ -128,7 +128,7 @@ class HCModel(object):
         '''
         The fuse layer, including 1 classifier
         '''
-        self.fuse_layer = self._crated_model(self.algo2)
+        self.fuse_layer = self._crated_model(self.fuse)
         self.fuse_layer.fit(features, self.labels)
         self.fuse_output_dim = 16
 
@@ -170,7 +170,7 @@ class HCModel(object):
         logger.info('* Base Layer:')
         for feature_type in data.feature_types:
             logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
-        logger.info('* Fuse Layer: {}'.format(self.algo2))
+        logger.info('* Fuse Layer: {}'.format(self.fuse))
         logger.info('------------------------------')
 
     def cross_validation(self):
@@ -219,7 +219,7 @@ class HCModel(object):
         lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
         prs, p_value = pearsonr(y_true, y_pred)
         acc = accuracy_score(y_true, y_pred)
-        logger.info('  [%]  QWK: %.3f, LWK: %.3f, PRS: %.3f, ACC: %.3f' % (dataset, qwk, lwk, prs, acc))
+        logger.info('  [{}] QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}'.format(dataset, qwk, lwk, prs, acc))
         return qwk, lwk, prs, acc
     
     def _build_result(self):

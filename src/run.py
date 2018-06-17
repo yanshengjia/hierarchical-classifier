@@ -115,6 +115,7 @@ def evaluate(args):
 	evaluate the trained model on dev files
 	"""
 	logger.info('Done with model evaluation!')
+	
 
 def predict(args):
 	"""
