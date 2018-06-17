@@ -6,7 +6,7 @@ The idea of hierarchical classification is similar with Blending / Stacking in E
 
 ## Introduction
 
-将从作文抽取出的所有特征按照不同维度分成5类：
+Divide all the features extracted from essays into 5 categories:
 
 - Lexical Features
 - Grammar Error Features
@@ -16,20 +16,19 @@ The idea of hierarchical classification is similar with Blending / Stacking in E
 
 将这5大类共96维特征，将其输入层次分类器，得到最终的作文得分预测值。
 
-层次分类器分为2层：
+The hierarchical classifier has 2 layers:
 
-- 第一层：5个分类器，分别对应5类作文特征：词法特征，句法特征，结构特征，内容特征，语法错误特征
+- Base layer: 5个分类器，分别对应5类作文特征：词法特征，句法特征，结构特征，内容特征，语法错误特征
   - input：从作文文本中抽取出的特征向量，按类别切成5个特征向量，词法特征向量输入词法特征分类器
   - output：3类，代表作文在某一维度表现的好中坏，e.g. (0, 0, 1)
   - label：按作文得分分桶 (bucketize)，根据数值范围将其值分为不同的类别，这里是好中坏三类
-- 第二层：一个分类器，默认为 LR
-  - input：第一层5个分类器输出的5个向量拼接而成，共15维
+- Fuse layer: 第一层5个分类器输出的5个向量拼接而成，共15维
   - output：16类，对应于初中作文分数范围 [0, 15]
   - label：作文得分真值
 
 ## Environment
 
-* python / python3
+* python
 * sklearn
 * numpy
 * scipy
@@ -76,12 +75,12 @@ python3 run.py
 	--dev_files ../data/devset/essay.dev.csv
 	--test_files ../data/testset/essay.test.csv
 	--result_dir ../data/results/
-	--algo1_1 lr
-	--algo1_2 lr
-	--algo1_3 lr
-	--algo1_4 lr
-	--algo1_5 lr
-	--algo2 lr
+	--c1 lr
+	--c2 lr
+	--c3 lr
+	--c4 lr
+	--c5 lr
+	--fuse lr
 ```
 
 You can see the list of available options by running:
@@ -95,13 +94,10 @@ usage: Hierarchical Classification on essay feature dataset
        [-h] [--prepare] [--train] [--evaluate] [--predict] [--cv]
        [--epochs EPOCHS] [--optim OPTIM] [--learning_rate LEARNING_RATE]
        [--weight_decay WEIGHT_DECAY] [--dropout_keep_prob DROPOUT_KEEP_PROB]
-       [--batch_size BATCH_SIZE] [--algo1 {gbdt,rf,svc,mnb,lrcv,lr}]
-       [--algo1_1 {gbdt,rf,svc,mnb,lrcv,lr}]
-       [--algo1_2 {gbdt,rf,svc,mnb,lrcv,lr}]
-       [--algo1_3 {gbdt,rf,svc,mnb,lrcv,lr}]
-       [--algo1_4 {gbdt,rf,svc,mnb,lrcv,lr}]
-       [--algo1_5 {gbdt,rf,svc,mnb,lrcv,lr}]
-       [--algo2 {gbdt,rf,svc,mnb,lrcv,lr}]
+       [--batch_size BATCH_SIZE] [--base {gbdt,rf,svc,mnb,lrcv,lr}]
+       [--c1 {gbdt,rf,svc,mnb,lrcv,lr}] [--c2 {gbdt,rf,svc,mnb,lrcv,lr}]
+       [--c3 {gbdt,rf,svc,mnb,lrcv,lr}] [--c4 {gbdt,rf,svc,mnb,lrcv,lr}]
+       [--c5 {gbdt,rf,svc,mnb,lrcv,lr}] [--fuse {gbdt,rf,svc,mnb,lrcv,lr}]
        [--data_files DATA_FILES [DATA_FILES ...]]
        [--train_files TRAIN_FILES [TRAIN_FILES ...]]
        [--dev_files DEV_FILES [DEV_FILES ...]]
@@ -130,26 +126,25 @@ train settings:
                         train batch size
 
 model settings:
-  --algo1 {gbdt,rf,svc,mnb,lrcv,lr}
-                        choose the algorithm for all classifiers in layer 1
-                        (base)
-  --algo1_1 {gbdt,rf,svc,mnb,lrcv,lr}
+  --base {gbdt,rf,svc,mnb,lrcv,lr}
+                        choose the algorithm for all classifiers in base layer
+  --c1 {gbdt,rf,svc,mnb,lrcv,lr}
                         choose the algorithm for classifier 1 (lexical) in
-                        layer 1
-  --algo1_2 {gbdt,rf,svc,mnb,lrcv,lr}
+                        base layer
+  --c2 {gbdt,rf,svc,mnb,lrcv,lr}
                         choose the algorithm for classifier 2 (grammar) in
-                        layer 1
-  --algo1_3 {gbdt,rf,svc,mnb,lrcv,lr}
+                        base layer
+  --c3 {gbdt,rf,svc,mnb,lrcv,lr}
                         choose the algorithm for classifier 3 (sentence) in
-                        layer 1
-  --algo1_4 {gbdt,rf,svc,mnb,lrcv,lr}
+                        base layer
+  --c4 {gbdt,rf,svc,mnb,lrcv,lr}
                         choose the algorithm for classifier 4 (structure) in
-                        layer 1
-  --algo1_5 {gbdt,rf,svc,mnb,lrcv,lr}
+                        base layer
+  --c5 {gbdt,rf,svc,mnb,lrcv,lr}
                         choose the algorithm for classifier 5 (content) in
-                        layer 1
-  --algo2 {gbdt,rf,svc,mnb,lrcv,lr}
-                        choose the algorithm for layer 2 (fuse)
+                        base layer
+  --fuse {gbdt,rf,svc,mnb,lrcv,lr}
+                        choose the algorithm for fuse layer
 
 path settings:
   --data_files DATA_FILES [DATA_FILES ...]
