@@ -115,9 +115,9 @@ class HCModel(object):
             base_model.fit(features, self.base_labels)
             self.base_layer[feature_type] = base_model
 
-    def _dense(self, data):
+    def _combo(self, data):
         '''
-        The dense layer, including all combinations of classifiers
+        The combo layer, including all combinations of classifiers
         Args:
             data: the HCDataset class implemented in dataset.py
         '''
@@ -131,7 +131,6 @@ class HCModel(object):
         self.fuse_layer = self._crated_model(self.algo2)
         self.fuse_layer.fit(features, self.labels)
         self.fuse_output_dim = 16
-        logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
 
     def _concat_features(self, feature_list):
         '''
@@ -150,7 +149,6 @@ class HCModel(object):
                 features = np.concatenate((features, feature), axis=1)
         assert features[0].size == 5 * self.n_classifiers, 'The dim of base features is incorrect!'
         self.base_output_dim = features[0].size
-        logger.info('Base output dim: {}'.format(self.base_output_dim))
         return features
 
     def _build_model(self, data):
@@ -162,8 +160,10 @@ class HCModel(object):
             base_output = self.base_layer[feature_type].predict_proba(self.base_feature[feature_type])
             base_output_list.append(base_output)
         base_output_features = self._concat_features(base_output_list)
+        logger.info('Base output dim: {}'.format(self.base_output_dim))
         logger.info('Building fuse layer...')
         self._fuse(base_output_features)
+        logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
 
         logger.info('------------------------------')
         logger.info('Model Architecture:')
@@ -191,52 +191,36 @@ class HCModel(object):
         if evaluate:
             self.evaluate(data)
 
-    def evaluate(self, data, save=True, draw=True):
+    def evaluate(self, data, dataset='test'):
         """
         Evaluate the model
         Args:
             data: the HCDataset class implemented in dataset.py
-            save: whether to save the evaluation results
-            draw: whether to draw the confusion matrix
+            dataset: which dataset to evaluate model, choices = ['train', 'dev', 'test']
         """
-        logger.info('Evaluating the model on dev set:')
+        logger.info('Evaluating the model on {} set:'.format(dataset))
+
+        if dataset == 'train':
+            data_set = data.train_set
+        elif dataset == 'dev':
+            data_set = data.dev_set
+        else:
+            data_set = data.test_set
+
         base_output_list = []
         for feature_type in data.feature_types:
-            features, y_true = data._gen_input(data.dev_set, feature_type=feature_type)
+            features, y_true = data._gen_input(data_set, feature_type=feature_type)
             base_output = self.base_layer[feature_type].predict_proba(features)
             base_output_list.append(base_output)
         base_output_features = self._concat_features(base_output_list)
         y_pred = self.fuse_layer.predict(base_output_features)
 
-        self.dev_qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
-        self.dev_lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
-        self.dev_prs, p_value = pearsonr(y_true, y_pred)
-        self.dev_acc = accuracy_score(y_true, y_pred)
-        logger.info('  [DEV]  QWK: %.3f, LWK: %.3f, PRS: %.3f, ACC: %.3f' % (self.dev_qwk, self.dev_lwk, self.dev_prs, self.dev_acc))
-
-        logger.info('Evaluating the model on test set:')
-        base_output_list = []
-        for feature_type in data.feature_types:
-            features, y_true = data._gen_input(data.test_set, feature_type=feature_type)
-            base_output = self.base_layer[feature_type].predict_proba(features)
-            base_output_list.append(base_output)
-        base_output_features = self._concat_features(base_output_list)
-        y_pred = self.fuse_layer.predict(base_output_features)
-
-        self.test_qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
-        self.test_lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
-        self.test_prs, p_value = pearsonr(y_true, y_pred)
-        self.test_acc = accuracy_score(y_true, y_pred)
-        logger.info('  [TEST] QWK: %.3f, LWK: %.3f, PRS: %.3f, ACC: %.3f' % (self.test_qwk, self.test_lwk, self.test_prs, self.test_acc))
-        logger.info('Done with model evaluation!')
-
-        if draw:
-            self.test_cm = self.draw_confusion_matrix(y_true, y_pred)
-            logger.info('Confusion matrix on test set:\n{}'.format(self.test_cm))
-            logger.info('Confusion matrix saved in: {}'.format(self.cm_path))
-
-        if save:
-            self.save_results()
+        qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
+        lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
+        prs, p_value = pearsonr(y_true, y_pred)
+        acc = accuracy_score(y_true, y_pred)
+        logger.info('  [%]  QWK: %.3f, LWK: %.3f, PRS: %.3f, ACC: %.3f' % (dataset, qwk, lwk, prs, acc))
+        return qwk, lwk, prs, acc
     
     def _build_result(self):
         result = {}
@@ -254,6 +238,7 @@ class HCModel(object):
 
     def draw_confusion_matrix(self, y_true, y_pred):
         cm = build_confusion_matrix(y_true, y_pred, self.fuse_output_dim, self.cm_path)
+        logger.info('Confusion matrix fig saved in: {}'.format(self.cm_path))
         return cm
 
     def save_results(self):

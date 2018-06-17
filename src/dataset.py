@@ -136,7 +136,6 @@ class HCDataset(object):
         Z standardization, or mean removal and variance scaling
         """
         self.scalers = {}
-
         for feature_type in self.feature_types:
             train_x = []
             for sample in self.train_set:

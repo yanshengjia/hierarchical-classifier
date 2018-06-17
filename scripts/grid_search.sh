@@ -3,17 +3,17 @@ cd ../src
 
 declare -a algo=('gbdt' 'svc' 'rf' 'lr')
 
-for algo1 in "${algo[@]}"
+for c1 in "${algo[@]}"
 do
-    for algo2 in "${algo[@]}"
+    for c2 in "${algo[@]}"
     do
-        for algo3 in "${algo[@]}"
+        for c3 in "${algo[@]}"
         do
-            for algo4 in "${algo[@]}"
+            for c4 in "${algo[@]}"
             do
-                for algo5 in "${algo[@]}"
+                for c5 in "${algo[@]}"
                 do
-                    python run.py --train --algo1_1 $algo1 --algo1_2 $algo2 --algo1_3 $algo3 --algo1_4 $algo4 --algo1_5 $algo5
+                    python run.py --train --c1 $c1 --c2 $c2 --c3 $c3 --c4 $c4 --c5 $c5
                 done
             done
         done
