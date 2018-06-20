@@ -12,6 +12,7 @@ import csv
 import yaml
 import json
 import numpy as np
+import itertools
 from sklearn import preprocessing
 
 
@@ -32,6 +33,7 @@ class HCDataset(object):
     """
     def __init__(self, config_path, data_files=[], train_files=[], dev_files=[], test_files=[]):
         self.feature_config = self.read_feature_config(config_path)
+        self._get_combo_features()
 
         self.data_set, self.train_set, self.dev_set, self.test_set = [], [], [], []
         if data_files:
@@ -74,6 +76,7 @@ class HCDataset(object):
                 self.feature_types = list(feature_config.keys())
                 self.feature_types.remove('basic')
                 logger.info('Feature types: ' + str(self.feature_types))
+                self.n_base_features = len(list(self.feature_types))
 
                 self.feature_dim = {}
                 for feature_type in self.full_feature_types:
@@ -130,6 +133,17 @@ class HCDataset(object):
         labels = np.array(labels)
         assert features[0].size == len(self.feature_config[feature_type]), 'The {} feature dim in dataset is incorrect!'.format(feature_type)
         return features, labels
+
+    def _get_combo_features(self):
+        '''
+        Generate all combinations of basic features
+        '''
+        self.combo_feature_types = []
+        for i in range(1, self.n_base_features + 1):
+            for item in itertools.combinations(self.feature_types, i):
+                self.combo_feature_types.append('_'.join(list(item)))
+        self.n_combo_features = len(self.combo_feature_types)
+        logger.info('Combo feature dim: {}'.format(self.n_combo_features))
 
     def standardize(self):
         """

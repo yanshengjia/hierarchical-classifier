@@ -48,6 +48,7 @@ class HCModel(object):
     def __init__(self, args):
         # basic config
         self.base   = args.base
+        self.combo  = args.combo
         self.fuse   = args.fuse
         
         if self.base:
@@ -102,7 +103,7 @@ class HCModel(object):
         '''
         self.base_layer = {}    # the dict of base classifiers
         self.base_feature = {}  # the dict of input features for base classifiers
-        self.n_classifiers = len(list(data.feature_types))
+        self.n_base_features = data.n_base_features
         for feature_type in data.feature_types:
             logger.info('  Generate {} features and labels from train set.'.format(feature_type))
             features, self.labels = data._gen_input(data.train_set, feature_type=feature_type)
@@ -117,12 +118,29 @@ class HCModel(object):
 
     def _combo(self, data):
         '''
-        The combo layer, including all combinations of classifiers
+        The combo layer, including all feature combinations (31 types) of classifiers
         Args:
             data: the HCDataset class implemented in dataset.py
         '''
-        pass
-
+        self.combo_layer = {}    # the dict of combo classifiers
+        self.combo_feature = {}  # the dict of input features for combo classifiers
+        self.n_combo_features = data.n_combo_features
+        for feature_type in data.combo_feature_types:
+            logger.info('  Generate {} features and labels from train set.'.format(feature_type))
+            f = feature_type.split('_')
+            feature_list = []
+            for f_type in f:
+                features, self.labels = data._gen_input(data.train_set, feature_type=f_type)
+                feature_list.append(features)
+            features = self._concat_features(feature_list)
+            self.combo_feature[feature_type] = features
+            self.combo_labels = data.bucketize(self.labels)
+            model_type = self.combo
+            assert model_type != '', 'The model type for {} classifier is not specified.'.format(feature_type)
+            logger.info('  Train {} model for {} classifier.'.format(model_type, feature_type))
+            combo_model = self._crated_model(model_type)
+            combo_model.fit(features, self.combo_labels)
+            self.combo_layer[feature_type] = combo_model
 
     def _fuse(self, features):
         '''
@@ -136,9 +154,9 @@ class HCModel(object):
         '''
         Concat feature matrixs horizontally
         Args:
-            feature_list: the list of feature matrix, each is (n_samples, 3)
+            feature_list: the list of feature matrix
         Rtype:
-            features: (n_samples, 15)
+            features: (n_samples, ?)
         '''
         first_flag = True
         for feature in feature_list:
@@ -147,29 +165,28 @@ class HCModel(object):
                 first_flag = False
             else:
                 features = np.concatenate((features, feature), axis=1)
-        assert features[0].size == 5 * self.n_classifiers, 'The dim of base features is incorrect!'
-        self.base_output_dim = features[0].size
         return features
 
     def _build_model(self, data):
-        logger.info('Building base layer...')
-        self._base(data)
-        logger.info('Generating base layer output...')
-        base_output_list = []
-        for feature_type in data.feature_types: 
-            base_output = self.base_layer[feature_type].predict_proba(self.base_feature[feature_type])
-            base_output_list.append(base_output)
-        base_output_features = self._concat_features(base_output_list)
-        logger.info('Base output dim: {}'.format(self.base_output_dim))
+        logger.info('Building combo layer...')
+        self._combo(data)
+        logger.info('Generating combo layer output...')
+        combo_output_list = []
+        for feature_type in data.combo_feature_types:
+            combo_output = self.combo_layer[feature_type].predict_proba(self.combo_feature[feature_type])
+            combo_output_list.append(combo_output)
+        combo_output_features = self._concat_features(combo_output_list)
+        self.combo_output_dim = combo_output_features[0].size
+        logger.info('Combo output dim: {}'.format(self.combo_output_dim))
         logger.info('Building fuse layer...')
-        self._fuse(base_output_features)
+        self._fuse(combo_output_features)
         logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
 
         logger.info('------------------------------')
         logger.info('Model Architecture:')
-        logger.info('* Base Layer:')
-        for feature_type in data.feature_types:
-            logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
+        logger.info('* Combo Layer:')
+        for feature_type in data.combo_feature_types:
+            logger.info('  * {} classifier: {}'.format(feature_type, self.combo))
         logger.info('* Fuse Layer: {}'.format(self.fuse))
         logger.info('------------------------------')
 
@@ -189,7 +206,8 @@ class HCModel(object):
         self._build_model(data)
 
         if evaluate:
-            self.evaluate(data)
+            self.evaluate(data, dataset='train')
+            self.evaluate(data, dataset='test')
 
     def evaluate(self, data, dataset='test'):
         """
@@ -207,13 +225,18 @@ class HCModel(object):
         else:
             data_set = data.test_set
 
-        base_output_list = []
-        for feature_type in data.feature_types:
-            features, y_true = data._gen_input(data_set, feature_type=feature_type)
-            base_output = self.base_layer[feature_type].predict_proba(features)
-            base_output_list.append(base_output)
-        base_output_features = self._concat_features(base_output_list)
-        y_pred = self.fuse_layer.predict(base_output_features)
+        combo_output_list = []
+        for feature_type in data.combo_feature_types:
+            f = feature_type.split('_')
+            feature_list = []
+            for f_type in f:
+                features, y_true = data._gen_input(data_set, feature_type=f_type)
+                feature_list.append(features)
+            features = self._concat_features(feature_list)
+            combo_output = self.combo_layer[feature_type].predict_proba(features)
+            combo_output_list.append(combo_output)
+        combo_output_features = self._concat_features(combo_output_list)
+        y_pred = self.fuse_layer.predict(combo_output_features)
 
         qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
