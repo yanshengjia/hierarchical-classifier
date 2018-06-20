@@ -29,6 +29,7 @@ from sklearn.externals import joblib
 
 from dataset import HCDataset
 from plot_confusion_matrix import *
+from relative_accuracy import *
 
 import logging
 logging.basicConfig(
@@ -242,8 +243,9 @@ class HCModel(object):
         lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
         prs, p_value = pearsonr(y_true, y_pred)
         acc = accuracy_score(y_true, y_pred)
-        logger.info('  [{}] QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}'.format(dataset, qwk, lwk, prs, acc))
-        return qwk, lwk, prs, acc
+        racc = relative_accuracy(y_true, y_pred)
+        logger.info('  [{}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(dataset, qwk, lwk, prs, acc, racc)) 
+        return qwk, lwk, prs, acc, racc
     
     def _build_result(self):
         result = {}

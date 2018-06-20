@@ -59,7 +59,7 @@ def parse_args():
 	model_settings.add_argument('--c3', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 3 (sentence) in base layer')
 	model_settings.add_argument('--c4', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 4 (structure) in base layer')
 	model_settings.add_argument('--c5', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 5 (content) in base layer')
-	model_settings.add_argument('--combo', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for combo layer')
+	model_settings.add_argument('--combo', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='svc', help='choose the algorithm for combo layer')
 	model_settings.add_argument('--fuse', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for fuse layer')
 
 	path_settings = parser.add_argument_group('path settings')
