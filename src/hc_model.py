@@ -48,6 +48,7 @@ class HCModel(object):
 	"""
     def __init__(self, args):
         # basic config
+        self.single = args.single
         self.base   = args.base
         self.combo  = args.combo
         self.fuse   = args.fuse
@@ -81,9 +82,9 @@ class HCModel(object):
         Selects the classification model
         '''
         if model_type == 'gbdt':
-            model = GradientBoostingClassifier()
+            model = GradientBoostingClassifier(n_estimators=100)
         elif model_type == 'rf':
-            model = RandomForestClassifier(n_estimators=30)
+            model = RandomForestClassifier(n_estimators=100)
         elif model_type == 'svc':
             model = svm.SVC(kernel='linear', probability=True)
         elif model_type == 'mnb':
@@ -168,7 +169,30 @@ class HCModel(object):
                 features = np.concatenate((features, feature), axis=1)
         return features
 
-    def _build_model(self, data):
+    def _build_base_model(self, data):
+        logger.info('Building base layer...')
+        self._base(data)
+        logger.info('Generating base layer output...')
+        base_output_list = []
+        for feature_type in data.feature_types:
+            base_output = self.base_layer[feature_type].predict_proba(self.base_feature[feature_type])
+            base_output_list.append(base_output)
+        base_output_features = self._concat_features(base_output_list)
+        self.base_output_dim = base_output_features[0].size
+        logger.info('Base output dim: {}'.format(self.base_output_dim))
+        logger.info('Building fuse layer...')
+        self._fuse(base_output_features)
+        logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
+
+        logger.info('------------------------------')
+        logger.info('Model Architecture:')
+        logger.info('* Base Layer:')
+        for feature_type in data.feature_types:
+            logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
+        logger.info('* Fuse Layer: {}'.format(self.fuse))
+        logger.info('------------------------------')
+
+    def _build_combo_model(self, data):
         logger.info('Building combo layer...')
         self._combo(data)
         logger.info('Generating combo layer output...')
@@ -204,7 +228,10 @@ class HCModel(object):
             data: the HCDataset class implemented in dataset.py
             evaluate: whether to evaluate the model on test set after training
         """
-        self._build_model(data)
+        if self.single:
+            self._build_base_model(data)
+        else:
+            self._build_combo_model(data)
 
         if evaluate:
             self.evaluate(data, dataset='train')
@@ -226,25 +253,34 @@ class HCModel(object):
         else:
             data_set = data.test_set
 
-        combo_output_list = []
-        for feature_type in data.combo_feature_types:
-            f = feature_type.split('_')
-            feature_list = []
-            for f_type in f:
-                features, y_true = data._gen_input(data_set, feature_type=f_type)
-                feature_list.append(features)
-            features = self._concat_features(feature_list)
-            combo_output = self.combo_layer[feature_type].predict_proba(features)
-            combo_output_list.append(combo_output)
-        combo_output_features = self._concat_features(combo_output_list)
-        y_pred = self.fuse_layer.predict(combo_output_features)
+        if self.single:
+            base_output_list = []
+            for feature_type in data.feature_types:
+                features, y_true = data._gen_input(data_set, feature_type=feature_type)
+                base_output = self.base_layer[feature_type].predict_proba(features)
+                base_output_list.append(base_output)
+            base_output_features = self._concat_features(base_output_list)
+            y_pred = self.fuse_layer.predict(base_output_features)
+        else:
+            combo_output_list = []
+            for feature_type in data.combo_feature_types:
+                f = feature_type.split('_')
+                feature_list = []
+                for f_type in f:
+                    features, y_true = data._gen_input(data_set, feature_type=f_type)
+                    feature_list.append(features)
+                features = self._concat_features(feature_list)
+                combo_output = self.combo_layer[feature_type].predict_proba(features)
+                combo_output_list.append(combo_output)
+            combo_output_features = self._concat_features(combo_output_list)
+            y_pred = self.fuse_layer.predict(combo_output_features)
 
         qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
         prs, p_value = pearsonr(y_true, y_pred)
         acc = accuracy_score(y_true, y_pred)
         racc = relative_accuracy(y_true, y_pred)
-        logger.info('  [{}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(dataset, qwk, lwk, prs, acc, racc)) 
+        logger.info('  [{:5}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(dataset, qwk, lwk, prs, acc, racc)) 
         return qwk, lwk, prs, acc, racc
     
     def _build_result(self):
