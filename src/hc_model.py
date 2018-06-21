@@ -74,8 +74,10 @@ class HCModel(object):
                         }
         
         # save info
+        self.result_dir  = args.result_dir
         self.result_path = args.result_dir + 'result.json'
-        self.cm_path = args.result_dir + 'cm.png'
+        self.cm_path     = args.result_dir + 'cm.png'
+        self.model_dir   = args.model_dir
 
     def _crated_model(self, model_type=''):
         '''
@@ -221,12 +223,13 @@ class HCModel(object):
         '''
         pass
 
-    def train(self, data, evaluate=True):
+    def train(self, data, evaluate=True, save=True):
         """
         Train the model with data
         Args:
             data: the HCDataset class implemented in dataset.py
             evaluate: whether to evaluate the model on test set after training
+            save: whether to save the models trained on train set
         """
         if self.single:
             self._build_base_model(data)
@@ -236,6 +239,10 @@ class HCModel(object):
         if evaluate:
             self.evaluate(data, dataset='train')
             self.evaluate(data, dataset='test')
+        
+        if save:
+            self.save_models(data)
+
 
     def evaluate(self, data, dataset='test'):
         """
@@ -283,6 +290,31 @@ class HCModel(object):
         logger.info('  [{:5}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(dataset, qwk, lwk, prs, acc, racc)) 
         return qwk, lwk, prs, acc, racc
     
+    def predict(self, data, dataset='test'):
+        """
+        Predict with the trained model
+        Args:
+            data: the HCDataset class implemented in dataset.py
+            dataset: which dataset to evaluate model, choices = ['train', 'dev', 'test']
+        """
+        logger.info('Predicting on {} set:'.format(dataset))
+
+        if dataset == 'train':
+            data_set = data.train_set
+        elif dataset == 'dev':
+            data_set = data.dev_set
+        else:
+            data_set = data.test_set
+        
+        
+
+
+
+    def draw_confusion_matrix(self, y_true, y_pred):
+        cm = build_confusion_matrix(y_true, y_pred, self.fuse_output_dim, self.cm_path)
+        logger.info('Confusion matrix fig saved in: {}'.format(self.cm_path))
+        return cm
+
     def _build_result(self):
         result = {}
         result.update(self.base_models)
@@ -297,11 +329,6 @@ class HCModel(object):
         result['test_acc'] = self.test_acc
         return result
 
-    def draw_confusion_matrix(self, y_true, y_pred):
-        cm = build_confusion_matrix(y_true, y_pred, self.fuse_output_dim, self.cm_path)
-        logger.info('Confusion matrix fig saved in: {}'.format(self.cm_path))
-        return cm
-
     def save_results(self):
         with open(self.result_path, 'a') as o_file:
             res = self._build_result()
@@ -309,14 +336,45 @@ class HCModel(object):
             o_file.write(res_json + '\n')
         logger.info('Evaluation results saved in: {}'.format(self.result_path))
 
-    def save_models(self, model_dir, model_predix):
-        pass
+    def save_models(self, data):
+        """
+        Saves the model into model_dir with feature_type as the model indicator
+        """
+        if self.single:
+            model_type = 'single'
+            for feature_type in data.feature_types:
+                model_prefix = feature_type
+                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                joblib.dump(self.base_layer[feature_type], model_path)
+        else:
+            model_type = 'multi'
+            for feature_type in data.combo_feature_types:
+                model_prefix = feature_type
+                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                joblib.dump(self.combo_layer[feature_type], model_path)
+        joblib.dump(self.fuse_layer, self.model_dir + model_type + '/fuse.pkl')
+        logger.info('Models saved in {}'.format(self.model_dir))
     
-    def restore(self, model_dir, model_predix):
-        pass
-    
-    def predict(self):
-        pass
+    def restore(self, data):
+        """
+        Restores the model from model_dir with feature_type as the model indicator
+        """
+        if self.single:
+            model_type = 'single'
+            self.base_layer = {}
+            for feature_type in data.feature_types:
+                model_prefix = feature_type
+                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                self.base_layer[feature_type] = joblib.load(model_path)
+        else:
+            model_type = 'multi'
+            self.combo_layer = {}
+            for feature_type in data.combo_feature_types:
+                model_prefix = feature_type
+                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                self.combo_layer[feature_type] = joblib.load(model_path)
+        self.fuse_layer = joblib.load(self.model_dir + model_type + '/fuse.pkl')
+        logger.info('Models restored from {}'.format(self.model_dir))
     
 
 

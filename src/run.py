@@ -123,7 +123,14 @@ def predict(args):
 	"""
 	predicts scores for test files
 	"""
-	pass
+	assert len(args.test_files) > 0, 'No test files are provided.'
+	logger.info('Loading dataset and configuration...')
+	hc_data = HCDataset(args.config_path, args.data_files, args.train_files, args.dev_files, args.test_files)
+	logger.info('Restoring the model...')
+	hc_model = HCModel(args)
+	hc_model.restore(hc_data)
+	logger.info('Predicting scores for test set...')
+	hc_model.evaluate()
 
 def main():
 	"""

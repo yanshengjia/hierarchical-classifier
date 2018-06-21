@@ -8,6 +8,7 @@
 
 # ignored directories
 /data/results/*
+/data/models/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
