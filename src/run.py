@@ -130,7 +130,7 @@ def predict(args):
 	hc_model = HCModel(args)
 	hc_model.restore(hc_data)
 	logger.info('Predicting scores for test set...')
-	hc_model.evaluate()
+	hc_model.predict(hc_data)
 
 def main():
 	"""

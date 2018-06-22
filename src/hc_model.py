@@ -297,8 +297,6 @@ class HCModel(object):
             data: the HCDataset class implemented in dataset.py
             dataset: which dataset to evaluate model, choices = ['train', 'dev', 'test']
         """
-        logger.info('Predicting on {} set:'.format(dataset))
-
         if dataset == 'train':
             data_set = data.train_set
         elif dataset == 'dev':
@@ -306,8 +304,32 @@ class HCModel(object):
         else:
             data_set = data.test_set
         
-        
-
+        if self.single:
+            base_output_list = []
+            base_pred_label_list = []
+            for feature_type in data.feature_types:
+                features, y_true = data._gen_input(data_set, feature_type=feature_type)
+                base_output = self.base_layer[feature_type].predict_proba(features)
+                base_output_list.append(base_output)
+                base_pred_label = self.base_layer[feature_type].predict(features)
+                base_pred_label_list.append(base_pred_label)
+            base_output_features = self._concat_features(base_output_list)
+            y_pred = self.fuse_layer.predict(base_output_features)
+            print(base_pred_label_list)
+            print(y_pred)
+        else:
+            combo_output_list = []
+            for feature_type in data.combo_feature_types:
+                f = feature_type.split('_')
+                feature_list = []
+                for f_type in f:
+                    features, y_true = data._gen_input(data_set, feature_type=f_type)
+                    feature_list.append(features)
+                features = self._concat_features(feature_list)
+                combo_output = self.combo_layer[feature_type].predict_proba(features)
+                combo_output_list.append(combo_output)
+            combo_output_features = self._concat_features(combo_output_list)
+            y_pred = self.fuse_layer.predict(combo_output_features)
 
 
     def draw_confusion_matrix(self, y_true, y_pred):
