@@ -13,11 +13,7 @@ import json
 import codecs
 
 
-raw_essay_features_path = '../data/essay_features_72.csv'
-scaled_essay_features_path = '../data/essay_features_72_scaled.csv'
-
-
-def scale_scores(self, raw_path, upper_limit = 15.0):
+def scale_scores(raw_path, upper_limit = 15.0):
     '''
     scale all essays' total_score to a preset value
     '''
@@ -37,7 +33,7 @@ def scale_scores(self, raw_path, upper_limit = 15.0):
             features.append(line)
     return features
     
-def save_scaled_scores(self, save_path, features):
+def save_scaled_scores(save_path, features):
     with codecs.open(save_path, 'w') as o_file:
         writer = csv.DictWriter(o_file, features[0].keys())
         writer.writeheader()
@@ -45,7 +41,10 @@ def save_scaled_scores(self, save_path, features):
             writer.writerow(row)
 
 def main():
-    pass
+    raw_essay_features_path = '../data/essay_features_raw.csv'
+    scaled_essay_features_path = '../data/essay_features.csv'
+    features = scale_scores(raw_essay_features_path)
+    save_scaled_scores(scaled_essay_features_path, features)
 
 if __name__ == '__main__':
     main()

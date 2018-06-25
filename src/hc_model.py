@@ -88,7 +88,7 @@ class HCModel(object):
         elif model_type == 'rf':
             model = RandomForestClassifier(n_estimators=100)
         elif model_type == 'svc':
-            model = svm.SVC(kernel='linear', probability=True)
+            model = svm.SVC(kernel='rbf', probability=True)
         elif model_type == 'mnb':
             model = MultinomialNB()
         elif model_type == 'lrcv':
@@ -397,10 +397,5 @@ class HCModel(object):
                 self.combo_layer[feature_type] = joblib.load(model_path)
         self.fuse_layer = joblib.load(self.model_dir + model_type + '/fuse.pkl')
         logger.info('Models restored from {}'.format(self.model_dir))
-    
-
-
-
-
 
 

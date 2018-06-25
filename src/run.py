@@ -53,14 +53,14 @@ def parse_args():
 	train_settings.add_argument('--batch_size', type=int, default=32, help='train batch size')
 
 	model_settings = parser.add_argument_group('model settings')
-	model_settings.add_argument('--single', action='store_true', help='use single channel model (base + fuse); if not, use multichannel model (combo + fuse)')
+	model_settings.add_argument('--model_type', choices=['single', 'multi'], help='single channel model: base + fuse; multichannel model: combo + fuse')
 	model_settings.add_argument('--base', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], help='choose the algorithm for all classifiers in base layer')
 	model_settings.add_argument('--c1', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 1 (lexical) in base layer')
 	model_settings.add_argument('--c2', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 2 (grammar) in base layer')
 	model_settings.add_argument('--c3', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 3 (sentence) in base layer')
 	model_settings.add_argument('--c4', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 4 (structure) in base layer')
 	model_settings.add_argument('--c5', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 5 (content) in base layer')
-	model_settings.add_argument('--combo', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for combo layer')
+	model_settings.add_argument('--combo', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='svc', help='choose the algorithm for combo layer')
 	model_settings.add_argument('--fuse', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for fuse layer')
 
 	path_settings = parser.add_argument_group('path settings')
