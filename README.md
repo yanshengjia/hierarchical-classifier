@@ -75,11 +75,8 @@ python3 run.py
 	--dev_files ../data/devset/essay.dev.csv
 	--test_files ../data/testset/essay.test.csv
 	--result_dir ../data/results/
-	--c1 lr
-	--c2 lr
-	--c3 lr
-	--c4 lr
-	--c5 lr
+	--model_type multi
+	--combo svc
 	--fuse lr
 ```
 

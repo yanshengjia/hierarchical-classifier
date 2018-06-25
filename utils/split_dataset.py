@@ -13,7 +13,7 @@ import csv
 import codecs
 import random
 
-raw_dataset_path = '../data/essay_featurescsv'
+raw_dataset_path = '../data/essay_features.csv'
 trainset_path    = '../data/trainset/essay.train.csv'
 devset_path      = '../data/devset/essay.dev.csv'
 testset_path     = '../data/testset/essay.test.csv'

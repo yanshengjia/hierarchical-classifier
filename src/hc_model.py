@@ -48,10 +48,10 @@ class HCModel(object):
 	"""
     def __init__(self, args):
         # basic config
-        self.single = args.single
-        self.base   = args.base
-        self.combo  = args.combo
-        self.fuse   = args.fuse
+        self.model_type = args.model_type
+        self.base       = args.base
+        self.combo      = args.combo
+        self.fuse       = args.fuse
         
         if self.base:
             self.c1 = self.base
@@ -171,51 +171,51 @@ class HCModel(object):
                 features = np.concatenate((features, feature), axis=1)
         return features
 
-    def _build_base_model(self, data):
-        logger.info('Building base layer...')
-        self._base(data)
-        logger.info('Generating base layer output...')
-        base_output_list = []
-        for feature_type in data.feature_types:
-            base_output = self.base_layer[feature_type].predict_proba(self.base_feature[feature_type])
-            base_output_list.append(base_output)
-        base_output_features = self._concat_features(base_output_list)
-        self.base_output_dim = base_output_features[0].size
-        logger.info('Base output dim: {}'.format(self.base_output_dim))
-        logger.info('Building fuse layer...')
-        self._fuse(base_output_features)
-        logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
+    def _build_model(self, data):
+        if self.model_type == 'single':
+            logger.info('Building base layer...')
+            self._base(data)
+            logger.info('Generating base layer output...')
+            base_output_list = []
+            for feature_type in data.feature_types:
+                base_output = self.base_layer[feature_type].predict_proba(self.base_feature[feature_type])
+                base_output_list.append(base_output)
+            base_output_features = self._concat_features(base_output_list)
+            self.base_output_dim = base_output_features[0].size
+            logger.info('Base output dim: {}'.format(self.base_output_dim))
+            logger.info('Building fuse layer...')
+            self._fuse(base_output_features)
+            logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
 
-        logger.info('------------------------------')
-        logger.info('Model Architecture:')
-        logger.info('* Base Layer:')
-        for feature_type in data.feature_types:
-            logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
-        logger.info('* Fuse Layer: {}'.format(self.fuse))
-        logger.info('------------------------------')
+            logger.info('------------------------------')
+            logger.info('Model Architecture:')
+            logger.info('* Base Layer:')
+            for feature_type in data.feature_types:
+                logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
+            logger.info('* Fuse Layer: {}'.format(self.fuse))
+            logger.info('------------------------------')
+        else:
+            logger.info('Building combo layer...')
+            self._combo(data)
+            logger.info('Generating combo layer output...')
+            combo_output_list = []
+            for feature_type in data.combo_feature_types:
+                combo_output = self.combo_layer[feature_type].predict_proba(self.combo_feature[feature_type])
+                combo_output_list.append(combo_output)
+            combo_output_features = self._concat_features(combo_output_list)
+            self.combo_output_dim = combo_output_features[0].size
+            logger.info('Combo output dim: {}'.format(self.combo_output_dim))
+            logger.info('Building fuse layer...')
+            self._fuse(combo_output_features)
+            logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
 
-    def _build_combo_model(self, data):
-        logger.info('Building combo layer...')
-        self._combo(data)
-        logger.info('Generating combo layer output...')
-        combo_output_list = []
-        for feature_type in data.combo_feature_types:
-            combo_output = self.combo_layer[feature_type].predict_proba(self.combo_feature[feature_type])
-            combo_output_list.append(combo_output)
-        combo_output_features = self._concat_features(combo_output_list)
-        self.combo_output_dim = combo_output_features[0].size
-        logger.info('Combo output dim: {}'.format(self.combo_output_dim))
-        logger.info('Building fuse layer...')
-        self._fuse(combo_output_features)
-        logger.info('Fuse output dim: {}'.format(self.fuse_output_dim))
-
-        logger.info('------------------------------')
-        logger.info('Model Architecture:')
-        logger.info('* Combo Layer:')
-        for feature_type in data.combo_feature_types:
-            logger.info('  * {} classifier: {}'.format(feature_type, self.combo))
-        logger.info('* Fuse Layer: {}'.format(self.fuse))
-        logger.info('------------------------------')
+            logger.info('------------------------------')
+            logger.info('Model Architecture:')
+            logger.info('* Combo Layer:')
+            for feature_type in data.combo_feature_types:
+                logger.info('  * {} classifier: {}'.format(feature_type, self.combo))
+            logger.info('* Fuse Layer: {}'.format(self.fuse))
+            logger.info('------------------------------')
 
     def cross_validation(self):
         '''
@@ -231,10 +231,7 @@ class HCModel(object):
             evaluate: whether to evaluate the model on test set after training
             save: whether to save the models trained on train set
         """
-        if self.single:
-            self._build_base_model(data)
-        else:
-            self._build_combo_model(data)
+        self._build_model(data)
 
         if evaluate:
             self.evaluate(data, dataset='train')
@@ -260,7 +257,7 @@ class HCModel(object):
         else:
             data_set = data.test_set
 
-        if self.single:
+        if self.model_type == 'single':
             base_output_list = []
             for feature_type in data.feature_types:
                 features, y_true = data._gen_input(data_set, feature_type=feature_type)
@@ -304,7 +301,7 @@ class HCModel(object):
         else:
             data_set = data.test_set
         
-        if self.single:
+        if self.model_type == 'single':
             base_output_list = []
             base_pred_label_list = []
             for feature_type in data.feature_types:
@@ -362,40 +359,36 @@ class HCModel(object):
         """
         Saves the model into model_dir with feature_type as the model indicator
         """
-        if self.single:
-            model_type = 'single'
+        if self.model_type == 'single':
             for feature_type in data.feature_types:
                 model_prefix = feature_type
-                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                model_path   = self.model_dir + self.model_type + '/' + model_prefix + '.pkl'
                 joblib.dump(self.base_layer[feature_type], model_path)
         else:
-            model_type = 'multi'
             for feature_type in data.combo_feature_types:
                 model_prefix = feature_type
-                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                model_path   = self.model_dir + self.model_type + '/' + model_prefix + '.pkl'
                 joblib.dump(self.combo_layer[feature_type], model_path)
-        joblib.dump(self.fuse_layer, self.model_dir + model_type + '/fuse.pkl')
+        joblib.dump(self.fuse_layer, self.model_dir + self.model_type + '/fuse.pkl')
         logger.info('Models saved in {}'.format(self.model_dir))
     
     def restore(self, data):
         """
         Restores the model from model_dir with feature_type as the model indicator
         """
-        if self.single:
-            model_type = 'single'
+        if self.model_type == 'single':
             self.base_layer = {}
             for feature_type in data.feature_types:
                 model_prefix = feature_type
-                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                model_path   = self.model_dir + self.model_type + '/' + model_prefix + '.pkl'
                 self.base_layer[feature_type] = joblib.load(model_path)
         else:
-            model_type = 'multi'
             self.combo_layer = {}
             for feature_type in data.combo_feature_types:
                 model_prefix = feature_type
-                model_path   = self.model_dir + model_type + '/' + model_prefix + '.pkl'
+                model_path   = self.model_dir + self.model_type + '/' + model_prefix + '.pkl'
                 self.combo_layer[feature_type] = joblib.load(model_path)
-        self.fuse_layer = joblib.load(self.model_dir + model_type + '/fuse.pkl')
+        self.fuse_layer = joblib.load(self.model_dir + self.model_type + '/fuse.pkl')
         logger.info('Models restored from {}'.format(self.model_dir))
 
 
