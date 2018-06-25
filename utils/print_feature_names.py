@@ -18,6 +18,7 @@ def print_feature_names():
         reader = csv.DictReader(file)
         for line in reader:
             print("\n".join(list(line.keys())))
+            print(len(list(line.keys())))
             break
 
 def main():

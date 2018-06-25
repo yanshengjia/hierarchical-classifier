@@ -131,7 +131,7 @@ class HCDataset(object):
         features = np.matrix(features)
         features = self.scalers[feature_type].transform(features)
         labels = np.array(labels)
-        assert features[0].size == len(self.feature_config[feature_type]), 'The {} feature dim in dataset is incorrect!'.format(feature_type)
+        assert features[0].size <= len(self.feature_config[feature_type]), 'The {} feature dim in dataset is incorrect!'.format(feature_type)
         return features, labels
 
     def _get_combo_features(self):
