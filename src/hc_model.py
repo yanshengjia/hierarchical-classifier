@@ -357,8 +357,14 @@ class HCModel(object):
 
     def save_models(self, data):
         """
-        Saves the model into model_dir with feature_type as the model indicator
+        Saves the scalers and models into model_dir with feature_type as the model indicator
         """
+        for feature_type in data.feature_types:
+            scaler_prefix = feature_type
+            scaler_path   = self.model_dir + '/scaler/' + scaler_prefix + '.scaler'
+            joblib.dump(data.scalers[feature_type], scaler_path)
+        logger.info('Scalers saved in {}'.format(self.model_dir + '/scaler'))
+
         if self.model_type == 'single':
             for feature_type in data.feature_types:
                 model_prefix = feature_type
@@ -370,7 +376,7 @@ class HCModel(object):
                 model_path   = self.model_dir + self.model_type + '/' + model_prefix + '.pkl'
                 joblib.dump(self.combo_layer[feature_type], model_path)
         joblib.dump(self.fuse_layer, self.model_dir + self.model_type + '/fuse.pkl')
-        logger.info('Models saved in {}'.format(self.model_dir))
+        logger.info('Models saved in {}'.format(self.model_dir + self.model_type))
     
     def restore(self, data):
         """
