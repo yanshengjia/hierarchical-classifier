@@ -123,9 +123,9 @@ class HCDataset(object):
         features, labels = [], []
         for sample in data:
             s = []
-            for key, val in sample.items():
-                if key in self.feature_config[feature_type]:
-                    s.append(float(val))
+            for f_type in self.feature_config[feature_type]:
+                if f_type in sample:
+                    s.append(float(sample[f_type]))
             features.append(s)
             labels.append(float(sample['score']))
         features = np.matrix(features)
