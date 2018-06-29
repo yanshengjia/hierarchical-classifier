@@ -129,12 +129,18 @@ class HCModel(object):
         self.combo_layer = {}    # the dict of combo classifiers
         self.combo_feature = {}  # the dict of input features for combo classifiers
         self.n_combo_features = data.n_combo_features
+
+        # preload features
+        self.preloaded_feature = {}
+        for f_type in data.feature_types:
+            self.preloaded_feature[f_type], self.labels = data._gen_input(data.train_set, feature_type=f_type)
+
         for feature_type in data.combo_feature_types:
             logger.info('  Generate {} features and labels from train set.'.format(feature_type))
-            f = feature_type.split('_')
+            f_list = feature_type.split('_')
             feature_list = []
-            for f_type in f:
-                features, self.labels = data._gen_input(data.train_set, feature_type=f_type)
+            for f_type in f_list:
+                features = self.preloaded_feature[f_type]
                 feature_list.append(features)
             features = self._concat_features(feature_list)
             self.combo_feature[feature_type] = features
