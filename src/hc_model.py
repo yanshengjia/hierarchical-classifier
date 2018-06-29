@@ -88,7 +88,7 @@ class HCModel(object):
         elif model_type == 'rf':
             model = RandomForestClassifier(n_estimators=100)
         elif model_type == 'svc':
-            model = svm.SVC(kernel='linear', probability=True)    # kernel type: ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed']
+            model = svm.SVC(kernel='rbf', probability=True)    # kernel type: ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed']
         elif model_type == 'mnb':
             model = MultinomialNB()
         elif model_type == 'lrcv':
@@ -194,7 +194,7 @@ class HCModel(object):
                 logger.info('  * {} classifier: {}'.format(feature_type, self.base_models[feature_type]))
             logger.info('* Fuse Layer: {}'.format(self.fuse))
             logger.info('------------------------------')
-        else:
+        elif self.model_type == 'multi':
             logger.info('Building combo layer...')
             self._combo(data)
             logger.info('Generating combo layer output...')
@@ -216,6 +216,8 @@ class HCModel(object):
                 logger.info('  * {} classifier: {}'.format(feature_type, self.combo))
             logger.info('* Fuse Layer: {}'.format(self.fuse))
             logger.info('------------------------------')
+        else:
+            raise NotImplementedError('The model type {} is not implemented.'.format(self.model_type))
 
     def cross_validation(self):
         '''
