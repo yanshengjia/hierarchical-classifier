@@ -77,8 +77,6 @@ class HCModel(object):
         # save info
         self.result_dir     = args.result_dir
         self.result_path    = args.result_dir + 'result.json'
-        self.good_cases_path = args.result_dir + 'good_case.csv'
-        self.bad_cases_path  = args.result_dir + 'bad_case.csv'
         self.cm_path        = args.result_dir + 'cm.png'
         self.model_dir      = args.model_dir
 
@@ -292,8 +290,8 @@ class HCModel(object):
             combo_output_features = self._concat_features(combo_output_list)
             y_pred = self.fuse_layer.predict(combo_output_features)
 
-        self.find_special_cases(data, data_set, y_true, y_pred, self.bad_cases_path, gap=2.0)
-        self.find_special_cases(data, data_set, y_true, y_pred, self.good_cases_path, gap=0.0)
+        self.find_special_cases(data, data_set, y_true, y_pred, self.result_dir + dataset + '_bad_cases.csv', gap=2.0)
+        self.find_special_cases(data, data_set, y_true, y_pred, self.result_dir + dataset + '_good_cases.csv', gap=0.0)
 
         qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
@@ -347,9 +345,14 @@ class HCModel(object):
     def find_special_cases(self, data, dataset, y_true, y_pred, save_path, gap=2.0):
         if self.model_type == 'multi':
             cases_list = []
-            for i in range(len(y_true)):
-                if abs(y_true[i] - y_pred[i]) <= gap:
-                    cases_list.append(i)
+            if gap == 0:
+                for i in range(len(y_true)):
+                    if abs(y_true[i] - y_pred[i]) == gap:
+                        cases_list.append(i)
+            else:
+                for i in range(len(y_true)):
+                    if abs(y_true[i] - y_pred[i]) > gap:
+                        cases_list.append(i)
             
             special_cases = []
             for case_num in cases_list:
@@ -371,8 +374,6 @@ class HCModel(object):
                 writer.writeheader()
                 for row in special_cases:
                     writer.writerow(row)
-
-            logger.info('Special cases saved in: {}'.format(save_path))
         else:
             raise NotImplementedError
 
