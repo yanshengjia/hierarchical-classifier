@@ -11,7 +11,8 @@ This module implements the hierarchical classification models.
 import os
 import sys
 sys.path.append('../utils')
-import time
+from time import time
+import csv
 import json
 import numpy as np
 import tensorflow as tf
@@ -74,10 +75,12 @@ class HCModel(object):
                         }
         
         # save info
-        self.result_dir  = args.result_dir
-        self.result_path = args.result_dir + 'result.json'
-        self.cm_path     = args.result_dir + 'cm.png'
-        self.model_dir   = args.model_dir
+        self.result_dir     = args.result_dir
+        self.result_path    = args.result_dir + 'result.json'
+        self.good_cases_path = args.result_dir + 'good_case.csv'
+        self.bad_cases_path  = args.result_dir + 'bad_case.csv'
+        self.cm_path        = args.result_dir + 'cm.png'
+        self.model_dir      = args.model_dir
 
     def _crated_model(self, model_type=''):
         '''
@@ -239,7 +242,9 @@ class HCModel(object):
             evaluate: whether to evaluate the model on test set after training
             save: whether to save the models trained on train set
         """
+        t0 = time()
         self._build_model(data)
+        logger.info("Training time: {:.3f}s".format(time() - t0))
 
         if evaluate:
             self.evaluate(data, dataset='train')
@@ -286,6 +291,9 @@ class HCModel(object):
                 combo_output_list.append(combo_output)
             combo_output_features = self._concat_features(combo_output_list)
             y_pred = self.fuse_layer.predict(combo_output_features)
+
+        self.find_special_cases(data, data_set, y_true, y_pred, self.bad_cases_path, gap=2.0)
+        self.find_special_cases(data, data_set, y_true, y_pred, self.good_cases_path, gap=0.0)
 
         qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
         lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
@@ -336,6 +344,37 @@ class HCModel(object):
             combo_output_features = self._concat_features(combo_output_list)
             y_pred = self.fuse_layer.predict(combo_output_features)
 
+    def find_special_cases(self, data, dataset, y_true, y_pred, save_path, gap=2.0):
+        if self.model_type == 'multi':
+            cases_list = []
+            for i in range(len(y_true)):
+                if abs(y_true[i] - y_pred[i]) <= gap:
+                    cases_list.append(i)
+            
+            special_cases = []
+            for case_num in cases_list:
+                case_dict = {}
+                case_dict['image_id'] = dataset[case_num]['image_id']
+                case_dict['true_score'] = y_true[case_num]
+                case_dict['pred_score'] = y_pred[case_num]
+
+                data_set = []
+                data_set.append(dataset[case_num])
+                for feature_type in data.feature_types:
+                    features, labels = data._gen_input(data_set, feature_type=feature_type)
+                    pred_proba = self.combo_layer[feature_type].predict_proba(features)
+                    case_dict[feature_type] = pred_proba[0]
+                special_cases.append(case_dict)
+            
+            with open(save_path, mode='w', encoding="utf8", errors='ignore') as out_file:
+                writer = csv.DictWriter(out_file, special_cases[0].keys())
+                writer.writeheader()
+                for row in special_cases:
+                    writer.writerow(row)
+
+            logger.info('Special cases saved in: {}'.format(save_path))
+        else:
+            raise NotImplementedError
 
     def draw_confusion_matrix(self, y_true, y_pred):
         cm = build_confusion_matrix(y_true, y_pred, self.fuse_output_dim, self.cm_path)
@@ -346,14 +385,11 @@ class HCModel(object):
         result = {}
         result.update(self.base_models)
         result['fuse']     = self.algo2
-        result['dev_qwk']  = self.dev_qwk
-        result['dev_lwk']  = self.dev_lwk
-        result['dev_prs']  = self.dev_prs
-        result['dev_acc']  = self.dev_acc
         result['test_qwk'] = self.test_qwk
         result['test_lwk'] = self.test_lwk
         result['test_prs'] = self.test_prs
         result['test_acc'] = self.test_acc
+        result['test_racc'] = self.test_racc
         return result
 
     def save_results(self):
