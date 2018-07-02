@@ -91,6 +91,9 @@ def parse_args():
 	path_settings.add_argument('--log_path',
                                default='../data/log/hc.log',
                                help='path of the log file.')
+	path_settings.add_argument('--essay_path',
+                               default='../data/essays.txt',
+                               help='path of the essay file.')
 	return parser.parse_args()
 
 def prepare(args):

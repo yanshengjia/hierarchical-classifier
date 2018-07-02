@@ -74,11 +74,12 @@ class HCModel(object):
                             'content': self.c5
                         }
         
-        # save info
-        self.result_dir     = args.result_dir
-        self.result_path    = args.result_dir + 'result.json'
-        self.cm_path        = args.result_dir + 'cm.png'
-        self.model_dir      = args.model_dir
+        # path info
+        self.result_dir  = args.result_dir
+        self.result_path = args.result_dir + 'result.json'
+        self.cm_path     = args.result_dir + 'cm.png'
+        self.model_dir   = args.model_dir
+        self.essay_path  = args.essay_path
 
     def _crated_model(self, model_type=''):
         '''
@@ -343,6 +344,13 @@ class HCModel(object):
             y_pred = self.fuse_layer.predict(combo_output_features)
 
     def find_special_cases(self, data, dataset, y_true, y_pred, save_path, gap=2.0):
+        with open(self.essay_path, mode='r', encoding="utf8", errors='ignore') as essay_file:
+            essay_list = []
+            for line in essay_file:
+                line = line.strip()
+                essay = json.loads(line)
+                essay_list.append(essay)
+
         if self.model_type == 'multi':
             cases_list = []
             if gap == 0:
@@ -357,9 +365,17 @@ class HCModel(object):
             special_cases = []
             for case_num in cases_list:
                 case_dict = {}
-                case_dict['image_id'] = dataset[case_num]['image_id']
+                image_id = dataset[case_num]['image_id']
+                case_dict['image_id'] = image_id
                 case_dict['true_score'] = y_true[case_num]
                 case_dict['pred_score'] = y_pred[case_num]
+                
+                for essay in essay_list:
+                    image_url = essay['image_url']
+                    temp_image_id = image_url.replace('http://klximg.oss-cn-beijing.aliyuncs.com/scanimage/', '')
+                    if image_id == temp_image_id:
+                        case_dict['essay'] = essay['ocr_correction']
+                        break
 
                 data_set = []
                 data_set.append(dataset[case_num])
