@@ -327,8 +327,6 @@ class HCModel(object):
                 base_pred_label_list.append(base_pred_label)
             base_output_features = self._concat_features(base_output_list)
             y_pred = self.fuse_layer.predict(base_output_features)
-            print(base_pred_label_list)
-            print(y_pred)
         else:
             combo_output_list = []
             for feature_type in data.combo_feature_types:
@@ -382,7 +380,7 @@ class HCModel(object):
                 for feature_type in data.feature_types:
                     features, labels = data._gen_input(data_set, feature_type=feature_type)
                     pred_proba = self.combo_layer[feature_type].predict_proba(features)
-                    case_dict[feature_type] = pred_proba[0]
+                    case_dict[feature_type + '_proba'] = pred_proba[0]
                 special_cases.append(case_dict)
             
             with open(save_path, mode='w', encoding="utf8", errors='ignore') as out_file:
@@ -395,7 +393,7 @@ class HCModel(object):
 
     def draw_confusion_matrix(self, y_true, y_pred):
         cm = build_confusion_matrix(y_true, y_pred, self.fuse_output_dim, self.cm_path)
-        logger.info('Confusion matrix fig saved in: {}'.format(self.cm_path))
+        logger.info('Confusion matrix fig saved in {}'.format(self.cm_path))
         return cm
 
     def _build_result(self):
@@ -414,7 +412,7 @@ class HCModel(object):
             res = self._build_result()
             res_json = json.dumps(res)
             o_file.write(res_json + '\n')
-        logger.info('Evaluation results saved in: {}'.format(self.result_path))
+        logger.info('Evaluation results saved in {}'.format(self.result_path))
 
     def save_models(self, data):
         """
