@@ -27,16 +27,25 @@ def print_feature_names():
 def compare_with_config(feature_list):
     with open(config_path, 'r') as stream:
         feature_config = yaml.load(stream)
+        feature_config_list = []
     
     print('Deprecated features:')
     for feature_type in list(feature_config.keys()):
         print('\n[' + feature_type + ']')
         config_feature_list = feature_config[feature_type]
+        feature_config_list.extend(config_feature_list)
         deprecated_features = []
         for feature in config_feature_list:
             if feature not in feature_list:
                 deprecated_features.append(feature)
         print("\n".join(deprecated_features))
+
+    print('\nNew features:')
+    new_features = []
+    for feature in feature_list:
+        if feature not in feature_config_list:
+            new_features.append(feature)
+    print("\n".join(new_features))
 
 def main():
     feature_list = print_feature_names()
