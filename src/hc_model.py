@@ -344,6 +344,7 @@ class HCModel(object):
                 combo_output_list.append(combo_output)
             combo_output_features = self._concat_features(combo_output_list)
             y_pred = self.fuse_layer.predict(combo_output_features)
+        return y_pred
 
     def find_special_cases(self, data, dataset, y_true, y_pred, save_path, gap=2.0):
         with open(self.essay_path, mode='r', encoding="utf8", errors='ignore') as essay_file:
