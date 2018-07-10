@@ -48,7 +48,7 @@ class HCModel(object):
 	Implements the main hierarchical classification Model
 	"""
     def __init__(self, args):
-        # basic config
+        # model config
         self.model_type = args.model_type
         self.base       = args.base
         self.combo      = args.combo
@@ -74,6 +74,10 @@ class HCModel(object):
                             'content': self.c5
                         }
         
+        # train config
+        self.cv = args.cv
+        self.folds = args.folds
+
         # path info
         self.result_dir  = args.result_dir
         self.result_path = args.result_dir + 'result.json'

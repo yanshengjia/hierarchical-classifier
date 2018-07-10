@@ -45,6 +45,7 @@ def parse_args():
 
 	train_settings = parser.add_argument_group('train settings')
 	train_settings.add_argument('--cv', action='store_true', help='use cross validation')
+	train_settings.add_argument('--folds', type=int, default=10, help='fold number in cross validation')
 	train_settings.add_argument('--epochs', type=int, default=10, help='train epochs')
 	train_settings.add_argument('--optim', default='adam', help='optimizer type')
 	train_settings.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
@@ -64,9 +65,6 @@ def parse_args():
 	model_settings.add_argument('--fuse', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for fuse layer')
 
 	path_settings = parser.add_argument_group('path settings')
-	path_settings.add_argument('--data_files', nargs='+',
-                               default=['../data/essay_features.csv'],
-                               help='list of files that contain the preprocessed data for cross validation')
 	path_settings.add_argument('--train_files', nargs='+',
                                default=['../data/trainset/essay.train.csv'],
                                help='list of files that contain the preprocessed train data')
@@ -107,7 +105,7 @@ def train(args):
 	trains the hierarchical classification model
 	"""
 	logger.info('Loading dataset and configuration...')
-	hc_data = HCDataset(args.config_path, args.data_files, args.train_files, args.dev_files, args.test_files)
+	hc_data = HCDataset(args.config_path, args.folds, args.train_files, args.dev_files, args.test_files)
 	logger.info('Initialize the model...')
 	hc_model = HCModel(args)
 	logger.info('Training the model...')

@@ -31,17 +31,12 @@ class HCDataset(object):
     """
     This module implements the APIs for loading and using dataset
     """
-    def __init__(self, config_path, data_files=[], train_files=[], dev_files=[], test_files=[]):
+    def __init__(self, config_path, folds, train_files=[], dev_files=[], test_files=[]):
         self.feature_config = self.read_feature_config(config_path)
+        self.folds = folds
         self._get_combo_features()
 
-        self.data_set, self.train_set, self.dev_set, self.test_set = [], [], [], []
-        if data_files:
-            for data_file in data_files:
-                self.data_set += self._load_dataset(data_file)
-            self.dataset_size = len(self.data_set)
-            logger.info('Data set size: {} essays.'.format(self.dataset_size))
-
+        self.train_set, self.dev_set, self.test_set = [], [], []
         if train_files:
             for train_file in train_files:
                 self.train_set += self._load_dataset(train_file)
@@ -183,3 +178,10 @@ class HCDataset(object):
         new_labels = np.array(new_labels)
         return new_labels
 
+    def kfold_split(self, k_splits):
+        """
+        Split the dataset into k folds
+        Args:
+            k_splits: int, the number of folds
+        """
+        pass
