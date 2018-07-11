@@ -14,14 +14,14 @@ Divide all the features extracted from essays into 5 categories:
 - Structure Features
 - Content Features
 
-将这5大类共96维特征，将其输入层次分类器，得到最终的作文得分预测值。
+将这5大类共91维特征，将其输入层次分类器，得到最终的作文得分预测值。
 
 The hierarchical classifier has 2 layers:
 
-- Base layer: 5个分类器，分别对应5类作文特征：词法特征，句法特征，结构特征，内容特征，语法错误特征
-  - input：从作文文本中抽取出的特征向量，按类别切成5个特征向量，词法特征向量输入词法特征分类器
-  - output：3类，代表作文在某一维度表现的好中坏，e.g. (0, 0, 1)
-  - label：按作文得分分桶 (bucketize)，根据数值范围将其值分为不同的类别，这里是好中坏三类
+- Combo layer: 31个分类器，对应5类作文特征的所有组合
+  - input：从作文文本中抽取出的特征向量，按类别的组合拼接特征向量
+  - output：5类
+  - label：按作文得分分桶 (bucketize)，分为5挡
 - Fuse layer: 第一层5个分类器输出的5个向量拼接而成，共15维
   - output：16类，对应于初中作文分数范围 [0, 15]
   - label：作文得分真值
@@ -65,7 +65,7 @@ category:
 
 ## Usage
 
-下面的命令可以在作文特征数据集上训练和评估层次分类器，每个分类器都使用 LR。
+下面的命令可以在作文特征数据集上训练和评估层次分类器，每个分类器都使用 LR，并使用10折交叉验证。
 
 ```shell
 cd /path/to/hierarchical-classifier/src
@@ -78,6 +78,8 @@ python3 run.py
 	--model_type multi
 	--combo svc
 	--fuse lr
+	--cv
+	--folds 10
 ```
 
 You can see the list of available options by running:
