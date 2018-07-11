@@ -56,6 +56,7 @@ class HCDataset(object):
             self.testset_size = len(self.test_set)
             logger.info('Test set size: {} essays.'.format(self.testset_size))
         
+        self.cv = cv
         if cv:
             self.folds = folds
             self.cv_dataset_list = self.kfold_split(folds)
@@ -197,9 +198,11 @@ class HCDataset(object):
         fold_size = dataset_size / float(k_splits)
         chunked_dataset = []
         last = 0.0
-        while last < dataset_size:
+        split_counter = 1
+        while split_counter <= k_splits:
             chunked_dataset.append(dataset[int(last):int(last + fold_size)])
             last += fold_size
+            split_counter += 1
         assert len(chunked_dataset) == k_splits, 'The size of chunked_dataset should be same as k_splits!'
         
         for index in range(k_splits):

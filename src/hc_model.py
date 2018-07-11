@@ -105,7 +105,7 @@ class HCModel(object):
             raise NotImplementedError('The model {} is not implemented.'.format(model_type))
         return model
 
-    def _base(self, data):
+    def _base(self, data, train_set):
         '''
         The base layer, including 5 classifiers
         Args:
@@ -116,7 +116,7 @@ class HCModel(object):
         self.n_base_features = data.n_base_features
         for feature_type in data.feature_types:
             logger.info('  Generate {} features and labels from train set.'.format(feature_type))
-            features, self.labels = data._gen_input(data.train_set, feature_type=feature_type)
+            features, self.labels = data._gen_input(train_set, feature_type=feature_type)
             self.base_feature[feature_type] = features
             self.base_labels = data.bucketize(self.labels)
             model_type = self.base_models[feature_type]
@@ -126,7 +126,7 @@ class HCModel(object):
             base_model.fit(features, self.base_labels)
             self.base_layer[feature_type] = base_model
 
-    def _combo(self, data):
+    def _combo(self, data, train_set):
         '''
         The combo layer, including all feature combinations (31 types) of classifiers
         Args:
@@ -139,7 +139,7 @@ class HCModel(object):
         # preload features
         self.preloaded_feature = {}
         for f_type in data.feature_types:
-            self.preloaded_feature[f_type], self.labels = data._gen_input(data.train_set, feature_type=f_type)
+            self.preloaded_feature[f_type], self.labels = data._gen_input(train_set, feature_type=f_type)
 
         for feature_type in data.combo_feature_types:
             logger.info('  Generate {} features and labels from train set.'.format(feature_type))
@@ -186,7 +186,7 @@ class HCModel(object):
     def _build_model(self, data):
         if self.model_type == 'single':
             logger.info('Building base layer...')
-            self._base(data)
+            self._base(data, data.train_set)
             logger.info('Generating base layer output...')
             base_output_list = []
             for feature_type in data.feature_types:
@@ -208,7 +208,7 @@ class HCModel(object):
             logger.info('------------------------------')
         elif self.model_type == 'multi':
             logger.info('Building combo layer...')
-            self._combo(data)
+            self._combo(data, data.train_set)
             logger.info('Generating combo layer output...')
             combo_output_list = []
             for feature_type in data.combo_feature_types:
@@ -231,11 +231,83 @@ class HCModel(object):
         else:
             raise NotImplementedError('The model type {} is not implemented.'.format(self.model_type))
 
-    def cross_validation(self):
+    def cross_validate(self, data):
         '''
         Use cross validation
         '''
-        pass
+        logger.info('Start cross validation...')
+        self.folds = data.folds
+        self.cv_dataset_list = data.cv_dataset_list
+        self.cv_model_list = []
+        cv_num = 1
+        cv_train_qwk, cv_train_lwk, cv_train_prs, cv_train_acc, cv_train_racc = 0.0, 0.0, 0.0, 0.0, 0.0
+        cv_test_qwk, cv_test_lwk, cv_test_prs, cv_test_acc, cv_test_racc      = 0.0, 0.0, 0.0, 0.0, 0.0
+
+        for train_test in self.cv_dataset_list:
+            logger.info('Training cv {}...'.format(cv_num))
+            train_set = train_test[0]
+            test_set  = train_test[1]
+
+            self.cv_train(data, train_set)
+            train_qwk, train_lwk, train_prs, train_acc, train_racc = self.cv_evaluate(data, train_set, 'train', cv_num)
+            test_qwk, test_lwk, test_prs, test_acc, test_racc      = self.cv_evaluate(data, test_set, 'test', cv_num)
+
+            cv_train_qwk  += train_qwk
+            cv_train_lwk  += train_lwk
+            cv_train_prs  += train_prs
+            cv_train_acc  += train_acc
+            cv_train_racc += train_racc
+            cv_test_qwk   += test_qwk
+            cv_test_lwk   += test_lwk
+            cv_test_prs   += test_prs
+            cv_test_acc   += test_acc
+            cv_test_racc  += test_racc
+
+            cv_num += 1
+        
+        cv_train_qwk  /= self.folds
+        cv_train_lwk  /= self.folds
+        cv_train_prs  /= self.folds
+        cv_train_acc  /= self.folds
+        cv_train_racc /= self.folds
+        cv_test_qwk   /= self.folds
+        cv_test_lwk   /= self.folds
+        cv_test_prs   /= self.folds
+        cv_test_acc   /= self.folds
+        cv_test_racc  /= self.folds
+        logger.info('  [cv_train]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(cv_train_qwk, cv_train_lwk, cv_train_prs, cv_train_acc, cv_train_racc))
+        logger.info('  [cv_test ]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(cv_test_qwk, cv_test_lwk, cv_test_prs, cv_test_acc, cv_test_racc))
+
+    def cv_train(self, data, data_set):
+        self._combo(data, data_set)
+        combo_output_list = []
+        for feature_type in data.combo_feature_types:
+            combo_output = self.combo_layer[feature_type].predict_proba(self.combo_feature[feature_type])
+            combo_output_list.append(combo_output)
+        combo_output_features = self._concat_features(combo_output_list)
+        self._fuse(combo_output_features)
+
+    def cv_evaluate(self, data, data_set, data_name, number):
+        combo_output_list = []
+        for feature_type in data.combo_feature_types:
+            f = feature_type.split('_')
+            feature_list = []
+            for f_type in f:
+                features, y_true = data._gen_input(data_set, feature_type=f_type)
+                feature_list.append(features)
+            features = self._concat_features(feature_list)
+            combo_output = self.combo_layer[feature_type].predict_proba(features)
+            combo_output_list.append(combo_output)
+        combo_output_features = self._concat_features(combo_output_list)
+        y_pred = self.fuse_layer.predict(combo_output_features)
+
+        qwk = cohen_kappa_score(y_true, y_pred, weights='quadratic')
+        lwk = cohen_kappa_score(y_true, y_pred, weights='linear')
+        prs, p_value = pearsonr(y_true, y_pred)
+        acc = accuracy_score(y_true, y_pred)
+        racc = relative_accuracy(y_true, y_pred)
+        logger.info('  [{}_{}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(data_name, number, qwk, lwk, prs, acc, racc))
+        return qwk, lwk, prs, acc, racc
 
     def train(self, data, evaluate=True, save=True):
         """
@@ -255,7 +327,9 @@ class HCModel(object):
         
         if save:
             self.save_models(data)
-
+        
+        if data.cv:
+            self.cross_validate(data)
 
     def evaluate(self, data, dataset='test'):
         """
