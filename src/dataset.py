@@ -31,9 +31,8 @@ class HCDataset(object):
     """
     This module implements the APIs for loading and using dataset
     """
-    def __init__(self, config_path, folds, train_files=[], dev_files=[], test_files=[]):
+    def __init__(self, config_path, cv, folds, train_files=[], dev_files=[], test_files=[]):
         self.feature_config = self.read_feature_config(config_path)
-        self.folds = folds
         self._get_combo_features()
 
         self.train_set, self.dev_set, self.test_set = [], [], []
@@ -56,6 +55,10 @@ class HCDataset(object):
                 self.test_set += self._load_dataset(test_file)
             self.testset_size = len(self.test_set)
             logger.info('Test set size: {} essays.'.format(self.testset_size))
+        
+        if cv:
+            self.folds = folds
+            self.cv_dataset_list = self.kfold_split(folds)
 
     def read_feature_config(self, config_path):
         """
@@ -182,6 +185,32 @@ class HCDataset(object):
         """
         Split the dataset into k folds
         Args:
-            k_splits: int, the number of folds
+            k_splits: the number of folds
         """
-        pass
+        logger.info('Use {}-fold cross validation'.format(k_splits))
+        cv_dataset_list = []    # [(trainset_1, testset_1), ..., (trainset_k, testset_k)]
+        dataset = self.train_set + self.dev_set
+        assert len(dataset) > 0, 'Please assign the train_files or dev_files!'
+
+        # chunk the dataset into k folds
+        dataset_size = len(dataset)
+        fold_size = dataset_size / float(k_splits)
+        chunked_dataset = []
+        last = 0.0
+        while last < dataset_size:
+            chunked_dataset.append(dataset[int(last):int(last + fold_size)])
+            last += fold_size
+        assert len(chunked_dataset) == k_splits, 'The size of chunked_dataset should be same as k_splits!'
+        
+        for index in range(k_splits):
+            testset = chunked_dataset[index]
+            trainset = []
+            for i in range(k_splits):
+                if i == index:
+                    continue
+                trainset += chunked_dataset[i]
+
+            train_test = (trainset, testset)
+            cv_dataset_list.append(train_test)
+        return cv_dataset_list
+    

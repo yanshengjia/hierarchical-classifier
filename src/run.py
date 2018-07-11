@@ -61,7 +61,7 @@ def parse_args():
 	model_settings.add_argument('--c3', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 3 (sentence) in base layer')
 	model_settings.add_argument('--c4', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 4 (structure) in base layer')
 	model_settings.add_argument('--c5', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for classifier 5 (content) in base layer')
-	model_settings.add_argument('--combo', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for combo layer')
+	model_settings.add_argument('--combo', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='svc', help='choose the algorithm for combo layer')
 	model_settings.add_argument('--fuse', choices=['gbdt', 'rf', 'svc', 'mnb', 'lrcv', 'lr'], default='lr', help='choose the algorithm for fuse layer')
 
 	path_settings = parser.add_argument_group('path settings')
@@ -105,7 +105,7 @@ def train(args):
 	trains the hierarchical classification model
 	"""
 	logger.info('Loading dataset and configuration...')
-	hc_data = HCDataset(args.config_path, args.folds, args.train_files, args.dev_files, args.test_files)
+	hc_data = HCDataset(args.config_path, args.cv, args.folds, args.train_files, args.dev_files, args.test_files)
 	logger.info('Initialize the model...')
 	hc_model = HCModel(args)
 	logger.info('Training the model...')
@@ -126,7 +126,7 @@ def predict(args):
 	"""
 	assert len(args.test_files) > 0, 'No test files are provided.'
 	logger.info('Loading dataset and configuration...')
-	hc_data = HCDataset(args.config_path, args.data_files, args.train_files, args.dev_files, args.test_files)
+	hc_data = HCDataset(args.config_path, args.cv, args.folds, args.train_files, args.dev_files, args.test_files)
 	logger.info('Restoring the model...')
 	hc_model = HCModel(args)
 	hc_model.restore(hc_data)
