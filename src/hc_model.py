@@ -235,7 +235,7 @@ class HCModel(object):
         '''
         Use cross validation
         '''
-        logger.info('Start cross validation...')
+        logger.info('Start {}-fold cross validation...'.format(data.folds))
         self.folds = data.folds
         self.cv_dataset_list = data.cv_dataset_list
         self.cv_model_list = []
@@ -306,7 +306,7 @@ class HCModel(object):
         prs, p_value = pearsonr(y_true, y_pred)
         acc = accuracy_score(y_true, y_pred)
         racc = relative_accuracy(y_true, y_pred)
-        logger.info('  [{}_{}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(data_name, number, qwk, lwk, prs, acc, racc))
+        logger.info('  [{:5}_{:2}]  QWK: {:.3f}, LWK: {:.3f}, PRS: {:.3f}, ACC: {:.3f}, RACC: {:.3f}'.format(data_name, number, qwk, lwk, prs, acc, racc))
         return qwk, lwk, prs, acc, racc
 
     def train(self, data, evaluate=True, save=True):
