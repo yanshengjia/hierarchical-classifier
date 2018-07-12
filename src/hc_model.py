@@ -244,7 +244,7 @@ class HCModel(object):
         cv_test_qwk, cv_test_lwk, cv_test_prs, cv_test_acc, cv_test_racc      = 0.0, 0.0, 0.0, 0.0, 0.0
 
         for train_test in self.cv_dataset_list:
-            logger.info('Training cv {}...'.format(cv_num))
+            logger.info('CV Round {}:'.format(cv_num))
             train_set = train_test[0]
             test_set  = train_test[1]
 
